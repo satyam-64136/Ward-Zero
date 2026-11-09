@@ -71,6 +71,7 @@ input{font:inherit;background:var(--glass);color:var(--tx);border:1px solid var(
 #toasts{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:grid;gap:8px;z-index:9;width:min(92vw,400px)}
 .toast{background:var(--bg);color:var(--tx);border:1px solid var(--line2);border-radius:14px;padding:12px 16px;box-shadow:0 20px 40px -10px #000a;animation:rv .3s both}.toast.err{border-color:var(--bad)}.toast.warn{border-color:var(--warn)}
 footer{padding:44px 0 40px;color:var(--dim);font-size:13.5px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.nl{list-style:none;margin:12px 0 0;padding:0}.nl li{display:flex;gap:10px;font-size:13.5px;color:var(--mu);padding:3px 0}.nl time{color:var(--dim);font-variant-numeric:tabular-nums;flex:none}.nl b{font-weight:500;color:var(--tx)}.al.signal .lv{color:var(--warn)}.al.signal.done .lv{color:var(--mu)}
 @media(max-width:1100px){.hero{grid-template-columns:1fr;gap:40px;padding-top:44px}.trio{grid-template-columns:1fr}}
 @media(max-width:720px){.wrap{padding:0 20px}.rail{grid-template-columns:1fr;gap:18px}.rail li::before{display:none}.pt{display:none}.sub{font-size:17px}.panel{padding:22px}.lvl{font-size:60px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
@@ -144,29 +145,31 @@ function loop(t){const dt=(t-E.t)/1000||0;E.t=t;if(S){const a=S.readings.at(-1);
 E.live=true;for(let i=0;i<340;i++)ecgStep(1/60);E.live=false;
 if(RM){E.live=true;ecgDraw()}else requestAnimationFrame(loop);
 const stage=(id,st,cap)=>{const li=$("s_"+id);li.className=st+(st=="on"||st=="warn"||st=="bad"?" live":"");setT(li.querySelector("small"),cap)};
-function render(){const R=S.risk,L=R.level,open=S.alerts.filter(a=>a.status=="open"),last=S.alerts[0],off=S.sim.offline,age=S.age,stale=age==null||age>6,acked=last&&last.status=="acknowledged",a=S.readings.at(-1);
+const lab=x=>x.kind=="signal"?"Signal lost":x.level+" risk",hm=t=>new Date(t*1000).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"}),
+nl=id=>{const n=S.notifications.filter(x=>x.alert_id==id).reverse();return n.length?`<ul class="nl" aria-label="Notifications sent (simulated)">${n.map(x=>`<li><time>${hm(x.ts)}</time><span><b>${esc(x.channel)}</b> to ${esc(x.recipient)}</span></li>`).join("")}</ul>`:""};
+function render(){const R=S.risk,L=R.level,open=S.alerts.filter(a=>a.status=="open"),last=S.alerts[0],off=S.sim.offline,age=S.age,stale=age==null||age>6,acked=last&&last.status=="acknowledged",a=S.readings.at(-1),sig=open.find(x=>x.kind=="signal");
   root.dataset.risk=a?L:"none";
   const fl=V.map(([k,n,,,key])=>[n,(R.pts||{})[key]||0]).filter(x=>x[1]>0).map(([n,p])=>`${n.toLowerCase()} ${LV[p].toLowerCase()}`);
-  setT($("hd"),!a?"Waiting for the first reading.":L=="Low"?"Vitals are stable.":L=="Medium"?"Worth a closer look.":"Needs attention now.");
-  setT($("hs"),!a?"Start the simulator to stream a patient’s vitals here.":(L=="Low"?"All four vitals are within their expected range.":fl.length?"Flagged: "+fl.join(", ")+".":"Raised by a recent trend or by caregiver notes.")+(R.early_warning?" The trend suggests a possible deterioration.":""));
+  setT($("hd"),!a?"Waiting for the first reading.":sig?"No signal from the device.":L=="Low"?"Vitals are stable.":L=="Medium"?"Worth a closer look.":"Needs attention now.");
+  setT($("hs"),!a?"Start the simulator to stream a patient’s vitals here.":sig?"Readings have stopped, so the patient is not being monitored. Last known risk: "+L+".":(L=="Low"?"All four vitals are within their expected range.":fl.length?"Flagged: "+fl.join(", ")+".":"Raised by a recent trend or by caregiver notes.")+(R.early_warning?" The trend suggests a possible deterioration.":""));
   $("riskp").className="glass panel rv "+L;setT($("rl"),L);setT($("score"),"Score "+R.score);document.title=(L=="Low"?"":`(${L}) `)+"Ward Zero | Home care monitor";
   setH($("why"),R.reasons.map(r=>{const m=r.match(/^(.*?)\s*\(\+(\d)\)$/);return m?`<li><span>${esc(m[1])}</span><b>+${m[2]}</b></li>`:`<li><span>${esc(r)}</span></li>`}).join(""));
   if(prev&&prev!=L)toast(L=="Low"?"Risk is back to Low":"Risk changed to "+L,L=="High"?"err":L=="Medium"?"warn":"");prev=L;
   V.forEach(([k,,,d,key])=>{const p=(R.pts||{})[key]||0;if(a)num($("v_"+k),+a[k],d);$("w_"+k).className="glass vc p"+p+" rv";setT($("w_"+k).querySelector(".vtag"),LV[p])});
   if(a){setT($("v_dbp"),"/"+Math.round(a.dbp));num($("hrbig"),+a.hr,0)}
   E.live=!off&&!stale;$("eh").className="ecgh"+(E.live?"":" off");setT($("lt"),off?"No signal, buffering":stale?"No signal":"Live");draw();
-  stage("sense",off?"warn":stale?"idle":"on",off?"Offline, buffering":stale?"Waiting for data":"Streaming live");
+  stage("sense",sig?"bad":off?"warn":stale?"idle":"on",sig?"Signal lost":off?"Offline, buffering":stale?"Waiting for data":"Streaming live");
   stage("understand",S.readings.length?"on":"idle",S.readings.length?"Risk score "+R.score:"No data yet");
   stage("predict",R.early_warning?"warn":"idle",R.early_warning?"Early warning raised":"No trend flagged");
-  stage("alert",open.length?"bad":"idle",open.length?open.length+" open":last?"Last was "+last.level:"No alerts");
+  stage("alert",open.length?"bad":"idle",open.length?open.length+" open":last?"Last was "+(last.kind=="signal"?"signal loss":last.level):"No alerts");
   stage("respond",open.length?"warn":acked?"ok":"idle",open.length?"Waiting for "+S.ladder[Math.max(...open.map(x=>x.esc))].split(" (")[0]:acked?`Acknowledged in ${Math.round(last.ack_ts-last.ts)}s`:"Nothing pending");
   document.querySelectorAll(".seg").forEach(g=>g.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(S.sim[g.dataset.g])==b.dataset.v)));
   setT($("ac"),open.length?open.length+" open":"No open alerts");
   setH($("alerts"),S.alerts.length?S.alerts.map(x=>{const o=x.status=="open",sup=x.status=="superseded";
-    if(sup)return`<article class="al done"><header><span class="lv">${x.level} risk</span><time>${new Date(x.ts*1000).toLocaleTimeString()}</time></header><p>Escalated into a higher alert.</p></article>`;
-    return`<article class="al ${x.level} ${o?"":"done"}"><header><span class="lv">${x.level} risk</span><time>${new Date(x.ts*1000).toLocaleTimeString()}</time></header><p>${esc(x.reason)}</p>`+
+    if(sup)return`<article class="al done"><header><span class="lv">${lab(x)}</span><time>${new Date(x.ts*1000).toLocaleTimeString()}</time></header><p>Escalated into a higher alert.</p></article>`;
+    return`<article class="al ${x.level} ${x.kind} ${o?"":"done"}"><header><span class="lv">${lab(x)}</span><time>${new Date(x.ts*1000).toLocaleTimeString()}</time></header><p>${esc(x.reason)}</p>${nl(x.id)}`+
     (o?`<ol class="lad">${S.ladder.map((l,i)=>`<li class="${i<x.esc?"passed":i==x.esc?"cur":""}">${esc(l)}</li>`).join("")}</ol><div class="row"><button class="btn pri" data-ack="${x.id}">Acknowledge</button><small id="cd_${x.id}"></small></div>`
-    :`<p class="ok-t">Acknowledged by ${esc(x.ack_by)} after ${Math.round(x.ack_ts-x.ts)}s</p>`)+`</article>`}).join(""):'<p class="empty">No alerts right now.</p><p class="hint">When risk reaches Medium or High, the caregiver is alerted first. An alert nobody acknowledges moves to the family, then to the doctor. Set the patient to Deteriorating to watch it happen.</p>');
+    :x.status=="resolved"?`<p class="ok-t">Signal restored after ${Math.round(x.ack_ts-x.ts)}s, closed automatically</p>`:`<p class="ok-t">Acknowledged by ${esc(x.ack_by)} after ${Math.round(x.ack_ts-x.ts)}s</p>`)+`</article>`}).join(""):'<p class="empty">No alerts right now.</p><p class="hint">When risk reaches Medium or High, the caregiver is alerted first. An alert nobody acknowledges moves to the family, then to the doctor. Set the patient to Deteriorating to watch it happen.</p>');
   setH($("notes"),S.notes.map(n=>`<li>${esc(n.text)}</li>`).join(""));tick()}
 function tick(){if(!S)return;const now=Date.now()/1000+skew,age=S.age==null?null:S.age+(now-S.now);
   if(S.sim.offline)chip("dev","bad","Network cut, buffering");else if(age==null||age>6)chip("dev","warn","No recent data");else chip("dev","ok","Device online");

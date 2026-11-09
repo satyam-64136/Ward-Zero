@@ -27,10 +27,10 @@ Submission document for **Operation Ward Zero**. It follows the structure the or
 |---|---|
 | Patient monitoring | Heart rate, SpO2, blood pressure, temperature; live values, sparklines and a simulated ECG |
 | Caregiver monitoring | Check-in with "on duty" status; acknowledgement records who responded and how fast |
-| System reliability | Atomic offline buffer, chunked flush, idempotent writes, input validation, device-state indicator |
+| System reliability | Atomic offline buffer, chunked flush, idempotent writes, input validation, device-state indicator, signal-lost alert when a device goes silent |
 | Contextual intelligence | Vitals, short-term history (trend) and English or Hindi caregiver notes combined in one score |
 | Predictive analytics | Trend rules over a 24-reading window raise an early warning |
-| Alert and escalation | Low, Medium, High; caregiver, then family, then doctor on a timer; higher alerts supersede lower ones |
+| Alert and escalation | Low, Medium, High; caregiver, then family, then doctor on a timer driven by a supervisor thread; each step logs a simulated push, SMS or voice call; higher alerts supersede lower ones |
 
 ## 4. Data processing and risk assessment approach
 
@@ -40,7 +40,8 @@ Submission document for **Operation Ward Zero**. It follows the structure the or
 2. Store with a client-generated id so retries cannot create duplicates.
 3. Score the latest reading against vital bands, add trend points and note points.
 4. Map the total to Low, Medium or High and return the list of reasons.
-5. Raise, supersede or leave alerts; escalation advances with the server clock.
+5. Raise, supersede or leave alerts; a supervisor thread advances escalation with the server clock and writes one simulated notification per step, with or without a dashboard open.
+6. If readings stop for longer than `SIGNAL_LOSS_SECONDS`, raise a signal-lost alert; close it when data returns.
 
 Details and a worked example: [RISK_MODEL.md](RISK_MODEL.md).
 
@@ -48,7 +49,7 @@ Details and a worked example: [RISK_MODEL.md](RISK_MODEL.md).
 
 ![Resilience](images/resilience.svg)
 
-Verified by tests and live runs: cutting the network buffers readings, restoring it flushes them in order, and the database contains exactly one copy of each.
+Verified by tests and live runs: cutting the network buffers readings, restoring it flushes them in order, and the database contains exactly one copy of each. A live comparison of buffered reading ids against database rows found 8 of 8 delivered after a network cut and 8 of 8 after the server was killed with `kill -9` and restarted. A device that stays silent raises a signal-lost alert instead of leaving the last risk on screen. `scripts/e2e_check.py` runs 15 checks against the real server process, including unattended escalation, replayed batches and bad data.
 
 ## 6. Explainability and clinical safety
 
@@ -56,14 +57,16 @@ Verified by tests and live runs: cutting the network buffers readings, restoring
 - Language is hedged. The product never states a diagnosis or recommends treatment.
 - Synthetic data only; thresholds are labelled illustrative on every screen and in the docs.
 - Safe defaults: localhost binding, no caching of API responses, escaped output.
+- Notifications are simulated and say "possible deterioration", never a diagnosis; a test enforces the wording.
+- A silent device is shown as "not being monitored", never as stable.
 
 ## 7. How the evaluation criteria are met
 
 | Criterion | Evidence |
 |---|---|
 | End-to-end integration (25%) | Live pipeline strip: Sense, Understand, Predict, Alert, Respond update from real state |
-| Technical skills (20%) | Layered code, pure risk functions (max complexity 7), 10 tests, CI, [assessment](ASSESSMENT.md) |
-| Reliability and resilience (20%) | Offline buffer, idempotency, validation, WAL, differential and regression tests |
+| Technical skills (20%) | Layered code, pure risk functions (max complexity 7), 33 tests plus a real-server end-to-end script, CI, [assessment](ASSESSMENT.md), [decision records](adr), [code tour](CODE_TOUR.md) |
+| Reliability and resilience (20%) | Offline buffer, idempotency, validation, WAL, signal-loss alert, unattended escalation, differential and regression tests |
 | Practical implementation (20%) | One-command demo, caregiver workflow, Hindi and English notes, light and dark UI, Docker |
 | Explainability and clinical safety (15%) | Reasons on every alert, hedged wording, disclaimers, no real data |
 
@@ -71,10 +74,14 @@ Verified by tests and live runs: cutting the network buffers readings, restoring
 
 **Assumptions.** One patient, one device, a trusted local network, synthetic data.
 
-**Limitations.** Illustrative thresholds, not clinically validated. The trend window counts readings, not hours. No login. In-app alerts only. The Docker image has not been built by the author's tooling (the gunicorn command it uses was run and verified).
+**Limitations.** Illustrative thresholds, not clinically validated. The trend window counts readings, not hours. No login. Notifications are simulated: they are logged and shown on the dashboard, and nothing is sent. Signal loss is measured against device timestamps. The Docker image has not been built by the author's tooling (the gunicorn command it uses was run and verified).
 
-**Future work.** Authentication and roles, SMS or WhatsApp escalation, multiple patients, time-based history, validated models with clinical partners, push updates instead of polling. See [ROADMAP.md](ROADMAP.md).
+**Future work.** Authentication and roles, real SMS or WhatsApp delivery with receipts, multiple patients, time-based history, validated models with clinical partners, push updates instead of polling. See [ROADMAP.md](ROADMAP.md).
 
-## 9. Setup
+## 9. Credits
+
+Flask (BSD-3-Clause), requests (Apache-2.0), SQLite (public domain); Instrument Sans and Instrument Serif fonts (SIL Open Font License). The scoring bands are inspired by the structure of NEWS2 (Royal College of Physicians) but are not NEWS2. No pretrained models and no external APIs.
+
+## 10. Setup
 
 See the [README](../README.md#quick-start). Run the tests with `python -m unittest -v`.

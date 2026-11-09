@@ -1,10 +1,10 @@
 # Engineering assessment
 
-A self-audit of the repository at version 0.3.0, structured like a modernization assessment: inventory, fingerprint, structure, debt, security, documentation, relative scale and recommendation.
+A self-audit of the repository at version 0.4.0, structured like a modernization assessment: inventory, fingerprint, structure, debt, security, documentation, relative scale and recommendation.
 
 ## Executive summary
 
-Ward Zero is a small (about 0.5 KSLOC of product code) Flask and vanilla-JavaScript prototype with a clean separation between device simulation, API, risk logic and UI. Average cyclomatic complexity is grade A (3.9) and no function exceeds grade B. Bandit reports no findings. The main risk is not code quality but scope: there is no authentication, so the service must stay on localhost. Recommendation: refactor in place, add authentication and a notification channel next, then replatform storage if multiple patients are needed.
+Ward Zero is a small (about 0.6 KSLOC of product code) Flask and vanilla-JavaScript prototype with a clean separation between device simulation, API, risk logic and UI. Average cyclomatic complexity is grade A (3.7) and no function exceeds grade B. Bandit reports no findings. The main risk is not code quality but scope: there is no authentication, so the service must stay on localhost. Version 0.4.0 added a supervisor thread (unattended escalation, a simulated notification log) and signal-loss detection; a real delivery channel and authentication are the next steps, then replatform storage if multiple patients are needed.
 
 ## 1. System inventory
 
@@ -12,22 +12,22 @@ Tooling: non-blank line count per file (`scc` and `cloc` were not available), `r
 
 | File | Language | Non-blank lines |
 |---|---|---|
-| `app.py` | Python | 146 |
+| `app.py` | Python | 202 |
 | `risk.py` | Python | 76 |
 | `simulator.py` | Python | 67 |
 | `demo.py` | Python | 39 |
-| `templates/index.html` | HTML, CSS, JavaScript | 184 |
-| **Product code** | | **512** |
-| `test_ward.py` | Python (tests) | 61 |
-| `scripts/make_diagrams.py` | Python (tooling) | 102 |
+| `templates/index.html` | HTML, CSS, JavaScript | 187 |
+| **Product code** | | **571** |
+| `test_ward.py`, `test_risk.py` | Python (tests) | 150, 59 |
+| `scripts/make_diagrams.py`, `scripts/e2e_check.py` | Python (tooling) | 105, 115 |
 
 | Measure | Result |
 |---|---|
-| Functions analysed | 28 |
-| Average cyclomatic complexity | A (3.9) |
-| Highest complexity | `demo.main` 9, `app.clean` 8, `app.state` 8 (all grade B) |
-| Maintainability index | A for every Python file |
-| Tests | 10, all passing |
+| Functions analysed | 35 |
+| Average cyclomatic complexity | A (3.7) |
+| Highest complexity | `demo.main` 9, `app.clean` 8 (both grade B) |
+| Maintainability index | A for every Python file (lowest: `app.py` 41.9) |
+| Tests | 33 unit and integration tests plus a 15-check end-to-end script, all passing |
 | Lint (`ruff`), security (`bandit`) | clean |
 
 ## 2. Technology fingerprint
@@ -39,7 +39,7 @@ Tooling: non-blank line count per file (`scc` and `cloc` were not available), `r
 | Data store | SQLite file, WAL mode (`app.py: init`) |
 | Integrations | None external; simulator to API over HTTP |
 | Build, deploy | Dockerfile (gunicorn, non-root), docker-compose, GitHub Actions CI |
-| Tests | `unittest` with the Flask test client (`test_ward.py`) |
+| Tests | `unittest` with the Flask test client (`test_ward.py`, `test_risk.py`) and a real-server end-to-end script (`scripts/e2e_check.py`) |
 
 ## 3. Architecture at a glance
 
@@ -69,12 +69,12 @@ graph TD
 |---|---|---|---|
 | 1 | No authentication or roles | every route in `app.py` | Open, mitigated by localhost default |
 | 2 | Demo control state is process-local | `SIM` in `app.py` | Open; Docker pins one worker |
-| 3 | Alert logic lives in `app.py` and `GET /api/state` performs writes (escalation) | `state()` | Open; extract an alert service |
+| 3 | Alert logic lives in `app.py`; `GET /api/state` still runs one supervision pass (a write) so the snapshot is never behind | `state()`, `cycle()` | Partly resolved in 0.4.0: a supervisor thread now escalates on its own. Extract an alert service next |
 | 4 | Thresholds are constants, not configuration | `risk.py` band tables | Open |
 | 5 | Trend window counts readings, not clock time | `risk.py: _trend` | Open; needs real history |
 | 6 | Single patient, no `patient_id` | schema | Open |
-| 7 | No schema migrations | `app.py: init` | Open |
-| 8 | Dashboard is one dense file with inline CSS and JavaScript, no frontend tests | `templates/index.html` | Open |
+| 7 | No migration framework | `app.py: init` | Partly resolved in 0.4.0: `init()` adds missing columns and tables (tested against a v0.3.0 database) |
+| 8 | Dashboard is one dense file with inline CSS and JavaScript; no automated frontend tests (a headless-DOM run was done by hand during development, it is not part of CI) | `templates/index.html` | Open |
 | 9 | Actions pinned by major tag, not SHA; Docker image not built in the authoring environment | `.github/workflows/ci.yml`, `Dockerfile` | Open |
 | 10 | `assess()` had cyclomatic complexity 24 | `risk.py` | **Resolved in 0.3.0** (now 6, behaviour identical on 5,000 random inputs) |
 
@@ -106,4 +106,19 @@ COCOMO-II basic index = 2.94 x (KSLOC)^1.10 = 2.94 x 0.512^1.10 = **1.41**, usin
 
 ## 8. Recommended pattern
 
-**Refactor in place.** The structure is sound; the next gains come from extracting an alert service, adding authentication, and adding a notification channel. Replatform to PostgreSQL only when multiple patients or hosts are needed.
+**Refactor in place.** The structure is sound; the next gains come from extracting an alert service, adding authentication, and replacing the simulated notification log with a real delivery channel. Replatform to PostgreSQL only when multiple patients or hosts are needed.
+
+## 9. Debug report for 0.4.0
+
+A structured pass (reproduce, isolate, diagnose, fix, prevent) over the running system, not only the unit tests. Method: run the real server and simulator together, drive the demo, then stress the claims the README makes.
+
+| # | Finding | Reproduction | Root cause | Fix | Prevention |
+|---|---|---|---|---|---|
+| 1 | **Silent failure.** If the device stopped sending, nothing alerted anyone; the last risk stayed on screen | Stop the simulator; the dashboard says "No recent data" forever, no alert, no escalation | Alerts were created only when a reading arrived | `watch_signal()` raises a signal-lost alert after `SIGNAL_LOSS_SECONDS` and closes it when data returns | `test_signal_loss_alert_raised_once_then_auto_resolved`, `test_second_silence_raises_a_second_alert`, e2e script |
+| 2 | **Escalation depended on a browser.** The ladder only advanced when someone polled `/api/state`, and nothing was ever "sent" | Start an alert, never open the dashboard, read the database: `esc` stays 0 | Lazy escalation inside a GET handler | A supervisor thread runs `cycle()` every second; each rung writes one row to `notifications` (idempotent, unique per alert and rung) | `test_escalation_and_notifications_advance_without_any_dashboard_poll`, `test_notifications_are_idempotent`, e2e script reads only `/api/notifications` |
+| 3 | **Hypothesis rejected: duplicate alerts under concurrency.** 16 threads posting High readings, 15 trials | Worst case was one open alert every time | The readings insert already takes SQLite's write lock before the alert check | None needed. The new background path takes `BEGIN IMMEDIATE` up front so it stays safe | `test_concurrent_requests_still_create_one_alert` |
+| 4 | **Test leak.** One test set `ESC = 1` for the rest of the run | Reordering tests changed outcomes | Module-level global mutated and never restored | `setUp` resets `ESC` and `SIGNAL_LOSS` | Every supervisor test sets what it needs |
+| 5 | **Misleading log.** A dead server was logged as "OFFLINE" like a cut network | Kill the server while the simulator runs | One flag for two causes | Log line now says `network cut` or `server unreachable` | Visible in the simulator output |
+| 6 | **Clipped diagram.** The first box of the escalation figure was drawn off the left edge | Open `docs/images/escalation.svg` | Box x position was negative | Boxes re-positioned in `scripts/make_diagrams.py` | Figures are regenerated from code |
+
+Verified by live run, comparing the reading ids held in `queue.json` with the ids in the database afterwards: a network cut of about 8 seconds buffered 8 readings and all 8 were stored; killing the server with `kill -9` for about 8 seconds buffered 8 readings and all 8 were stored after restart; in both runs there were no missing readings and no duplicates.

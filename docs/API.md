@@ -27,7 +27,19 @@ Invalid readings are counted in `rejected`; the rest of the batch is still saved
 
 ## GET /api/state
 
-One snapshot for the dashboard: `readings` (latest 40, oldest first), `risk`, `alerts` (latest 6), `notes` (latest 4), `checkin`, `sim`, `ladder`, `esc_seconds`, `age` (seconds since the last reading) and `now`.
+One snapshot for the dashboard: `readings` (latest 40, oldest first), `risk`, `alerts` (latest 6), `notifications` (latest 18), `notes` (latest 4), `checkin`, `sim`, `ladder`, `esc_seconds`, `signal_loss_seconds`, `age` (seconds since the last reading) and `now`.
+
+An alert has `kind` (`risk` or `signal`) and `status` (`open`, `acknowledged`, `superseded`, or `resolved`). `resolved` means the system closed it itself: a signal-lost alert ends when data returns, with `ack_by` set to `System`. `esc` is the current ladder rung (0 caregiver, 1 family, 2 doctor).
+
+This call also runs one supervision pass, so the snapshot is never behind the background supervisor thread. It is idempotent.
+
+## GET /api/notifications
+The latest 50 simulated notifications, newest first. One row is written per alert and ladder rung, so escalation can be observed without the dashboard.
+
+```json
+{ "notifications": [ { "alert_id": 3, "step": 1, "ts": 1794182640.2, "recipient": "Family (Rahul)", "channel": "SMS", "message": "Ward Zero: possible deterioration for Bed 1, High risk. SpO2 88% (+3). Please check the patient and acknowledge." } ] }
+```
+Delivery is **simulated**: the row is the notification and nothing is sent.
 
 ## POST /api/notes
 `{ "text": "saans phool rahi hai" }` stores a caregiver note (up to 500 characters). Notes influence risk for `NOTE_WINDOW_SECONDS`.

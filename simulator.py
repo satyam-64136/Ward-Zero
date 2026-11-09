@@ -48,17 +48,17 @@ def flush(q):
 def main():
     print(f"Simulator -> {API}  (Ctrl+C to stop)")
     while True:
-        offline, scenario = False, "stable"
+        offline, scenario, why = False, "stable", "network cut"
         try:  # control channel (separate from data channel)
             s = requests.get(f"{API}/api/sim", timeout=2).json()
             offline, scenario = bool(s["offline"]), s["scenario"]
         except Exception:
-            offline = True
+            offline, why = True, "server unreachable"
         q = load()
         q.append(tick(scenario))
         n = len(q)
         if offline:
-            print(f"OFFLINE - buffered {n}")
+            print(f"OFFLINE ({why}) - buffered {n}")
         else:
             try:
                 q, risk = flush(q)

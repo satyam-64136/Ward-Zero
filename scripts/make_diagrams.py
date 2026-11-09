@@ -35,27 +35,28 @@ def svg(name, h, body, title):
     open(os.path.join(OUT, name), "w", encoding="utf-8").write(s)
 
 # 1. System architecture
-b = lane(24, 340, 560, "Device layer (simulated)") + lane(384, 436, 560, "Platform layer (Flask + SQLite)") + lane(840, 336, 560, "Presentation layer (browser)")
+b = lane(24, 340, 640, "Device layer (simulated)") + lane(384, 436, 640, "Platform layer (Flask + SQLite)") + lane(840, 336, 640, "Presentation layer (browser)")
 b += box(48, 112, 292, 112, "Sensor simulator", ["Virtual HR, SpO2, BP, temperature", "Scenarios: stable, deteriorating", "One reading per second"], "dev", "simulator.py")
 b += box(48, 300, 292, 112, "Offline buffer", ["Atomic writes, capped at 5,000", "Flushed in chunks of 200", "Survives restarts and power loss"], "dev", "queue.json")
 b += box(408, 112, 388, 132, "REST API", ["POST /api/readings  validate, dedupe by cid", "GET /api/state  one snapshot for the UI", "POST /api/notes  /checkin  /alerts/id/ack", "GET /api/health  liveness"], "plat", "app.py")
 b += box(408, 290, 180, 118, "Risk engine", ["Vital bands + trend", "+ caregiver notes", "Explainable reasons"], "risk", "risk.py")
-b += box(616, 290, 180, 118, "Alert manager", ["Create, supersede", "Escalate on timer", "Acknowledge"], "bad", "app.py")
-b += box(408, 454, 388, 100, "SQLite (WAL mode)", ["readings, notes, alerts, checkins", "Idempotent inserts, lock timeout"], "plat", "wardzero.db")
+b += box(616, 290, 180, 118, "Alert manager", ["Raise, supersede", "Acknowledge", "Signal-lost alerts"], "bad", "app.py")
+b += box(408, 440, 388, 112, "Supervisor thread (every 1 s)", ["Escalates by the server clock, no browser needed", "Logs one notification per rung (simulated)", "Closes signal-lost alerts when data returns"], "bad", "app.py")
+b += box(408, 584, 388, 100, "SQLite (WAL mode)", ["readings, notes, alerts, checkins, notifications", "Idempotent inserts, write lock, timeout"], "plat", "wardzero.db")
 b += box(864, 112, 288, 132, "Dashboard", ["Polls /api/state every second", "Sends acknowledge, notes, controls", "Vitals, ECG trace, risk reasons"], "ui", "templates/index.html")
 b += box(864, 300, 288, 112, "Caregiver", ["Acknowledges alerts", "Checks in, adds notes (EN / HI)", "Controls the demo scenario"], "ok")
 b += arrow(340, 168, 408, 168, None, INK) + arrow(194, 300, 194, 226, "offline: store, then flush", MU, True, 194, 262)
 b += arrow(602, 244, 498, 290, "score", INK, lx=(548, 262)) + arrow(702, 244, 706, 290, "alerts", INK, lx=(708, 262))
-b += arrow(602, 408, 602, 454, "read / write", INK) + arrow(864, 160, 796, 160, None, INK)
+b += arrow(702, 408, 702, 440, "open alerts", INK) + arrow(602, 552, 602, 584, "read / write", INK) + arrow(864, 160, 796, 160, None, INK)
 b += arrow(1008, 300, 1008, 244, "uses", INK) + arrow(796, 214, 864, 214, None, INK)
-svg("architecture.svg", 640, b, "Ward Zero system architecture")
+svg("architecture.svg", 720, b, "Ward Zero system architecture")
 
 # 2. Data flow (pipeline)
 steps = [("Sense", "dev", ["Simulator emits one", "reading per second:", "hr, spo2, sbp, dbp, temp"], "reading"),
          ("Understand", "plat", ["Validate and store the", "reading, then score the", "four vitals against bands"], "score + reasons"),
          ("Predict", "risk", ["Compare the first and last", "6 readings of a 24-reading", "window for a worsening trend"], "early-warning flag"),
          ("Alert", "bad", ["Medium or High raises one", "alert. A higher level", "supersedes an open one"], "alert record"),
-         ("Respond", "ok", ["Caregiver, then family, then", "doctor on a timer. An", "acknowledgement closes it"], "ack + response time")]
+         ("Respond", "ok", ["Supervisor thread notifies", "caregiver, family, doctor", "until someone acknowledges"], "notification log + ack")]
 b = ""
 for i, (t, k, ls, art) in enumerate(steps):
     x = 28 + i * 232
@@ -84,9 +85,10 @@ b += f'<line x1="60" y1="132" x2="1140" y2="132" stroke="{LINE}" stroke-width="2
 for i, (t, who, k) in enumerate([("0 s", "Caregiver", "ok"), ("30 s", "Family", "risk"), ("60 s", "Doctor", "bad")]):
     x = 60 + i * 380
     b += f'<circle cx="{x}" cy="132" r="9" fill="{C[k][1]}"/>' + text(x, 112, t, 14, 700, INK, "middle")
-    b += box(x - 90 if i < 2 else x - 150, 160, 240 if i < 2 else 240, 96, who + " notified", ["Alert shown with a live", "countdown to the next step"] if i < 2 else ["Final rung: stays open", "until someone acknowledges"], k)
-b += box(60, 290, 520, 96, "Acknowledge", ["A caregiver taps Acknowledge on the dashboard.", "The alert closes and the response time is recorded."], "ok")
-b += box(620, 290, 520, 96, "Supersede rule", ["A higher-level alert replaces an open lower one.", "It keeps the original alarm time and ladder position."], "plat")
+    b += box(x - 36, 160, 280, 96, who + " notified", ([ "Push notification logged;", "dashboard shows a countdown"] if i == 0 else ["SMS logged (simulated);", "countdown to the next step"]) if i < 2 else ["Voice call logged (simulated);", "stays open until acknowledged"], k)
+b += box(60, 290, 340, 96, "Acknowledge", ["A caregiver taps Acknowledge.", "The alert closes; response time is kept."], "ok")
+b += box(430, 290, 340, 96, "Supersede rule", ["A higher alert replaces a lower one,", "keeping the original alarm time."], "plat")
+b += box(800, 290, 340, 96, "Signal lost", ["No readings for 45 s raises its own", "alert; it closes when data returns."], "risk")
 svg("escalation.svg", 410, b, "Alert escalation ladder")
 
 # 5. Resilience
@@ -94,16 +96,17 @@ cols = [("Simulator", 150), ("Disk buffer (queue.json)", 600), ("API + database"
 b = ""
 for n, x in cols:
     b += f'<rect x="{x - 130}" y="64" width="260" height="40" rx="10" fill="{C["plat"][0]}" stroke="{C["plat"][1]}"/>' + text(x, 89, n, 14, 700, INK, "middle")
-    b += f'<line x1="{x}" y1="104" x2="{x}" y2="470" stroke="{LINE}" stroke-dasharray="4 5"/>'
+    b += f'<line x1="{x}" y1="104" x2="{x}" y2="530" stroke="{LINE}" stroke-dasharray="4 5"/>'
 rows = [(136, "1", "Online: send each reading", 150, 1040, INK, "POST /api/readings"),
         (196, "2", "Network cut: append to buffer", 150, 600, "#c0352b", "atomic write"),
         (256, "3", "Dashboard shows 'No signal, buffering'", None, None, None, None),
         (316, "4", "Restored: flush oldest first, 200 at a time", 600, 1040, "#1b8450", "chunked POST"),
         (376, "5", "Validate, dedupe by cid, re-score by timestamp", None, None, None, None),
-        (436, "6", "Buffer clears only after a 200 response", 1040, 600, "#1b8450", "ok")]
+        (436, "6", "Buffer clears only after a 200 response", 1040, 600, "#1b8450", "ok"),
+        (496, "7", "Silent for 45 s (any cause): signal-lost alert; it closes when data returns", None, None, None, None)]
 for y, n, label, x1, x2, col, al in rows:
     b += f'<circle cx="60" cy="{y}" r="13" fill="{INK}"/>' + text(60, y + 5, n, 13, 700, "#fff", "middle")
     if x1: b += arrow(x1, y, x2, y, al, col, lx=(x1 + x2) / 2, ly=y - 16)
     b += text(90 if not x1 else (x1 + x2) / 2, y + 22 if x1 else y + 5, label, 13, 500, MU if x1 else INK, "middle" if x1 else "start")
-svg("resilience.svg", 500, b, "Offline buffering and recovery")
+svg("resilience.svg", 560, b, "Offline buffering and recovery")
 print("diagrams written to", os.path.abspath(OUT))

@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-11-09
+### Added
+- Supervisor thread: escalation and notifications advance every second with no browser open.
+- Simulated notification log (`notifications` table, `GET /api/notifications`), shown under each alert on the dashboard.
+- Signal-lost alert when no readings arrive for `SIGNAL_LOSS_SECONDS` (default 45); it closes itself when data returns.
+- `test_risk.py` (12 risk engine tests), 11 new API and supervisor tests, `scripts/e2e_check.py` (15 checks against the real server) and a CI step for it.
+- `docs/CODE_TOUR.md`, `docs/adr/` decision records, a debug report in `docs/ASSESSMENT.md`.
+### Changed
+- Alerts have a `kind` (`risk` or `signal`) and a new `resolved` status; existing databases are migrated on start.
+- Alert-writing paths take the SQLite write lock up front.
+- Simulator log distinguishes "network cut" from "server unreachable".
+### Fixed
+- A silent device no longer leaves the last risk on screen with no alert.
+- Escalation no longer depends on someone polling `/api/state`.
+- Test leak: one test left the escalation timer at 1 second for later tests.
+- The first box of the escalation diagram was drawn off the left edge.
+
 ## [0.3.0] - 2026-11-09
 ### Added
 - Redesigned dashboard: live pipeline, ECG trace, risk reasoning, response panel, light and dark themes, self-hosted fonts.

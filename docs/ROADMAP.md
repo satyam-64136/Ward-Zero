@@ -5,7 +5,7 @@ Planned work, written as tickets that a tester without code knowledge can verify
 | # | Ticket | Priority |
 |---|---|---|
 | 1 | Caregiver login | High |
-| 2 | Text message or WhatsApp escalation | High |
+| 2 | Real text message or WhatsApp delivery (the simulated notification log already exists) | High |
 | 3 | Several patients on one dashboard | Medium |
 | 4 | Real history, charts over hours and days | Medium |
 | 5 | Review of risk thresholds with a clinician | High |
@@ -23,7 +23,7 @@ Planned work, written as tickets that a tester without code knowledge can verify
 4. Sign in as a family member. You should see the dashboard but not the demo controls, and the Acknowledge button should be missing.
 
 ## 2. Text message or WhatsApp escalation
-**Why.** A caregiver who is away from the screen never sees an in-app alert.
+**Why.** Today each escalation step is written to a log and shown on the dashboard, but nothing leaves the machine, so a caregiver away from the screen still sees nothing.
 **How to check.**
 1. Set the family contact to your own phone number.
 2. Start the Deteriorating scenario and do not acknowledge.

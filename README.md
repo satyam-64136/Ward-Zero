@@ -27,7 +27,9 @@ Sense  ->  Understand  ->  Predict  ->  Alert  ->  Respond
 2. **Understand**: each reading is validated, stored and scored against NEWS2-inspired bands.
 3. **Predict**: a trend check over a 24-reading window raises an early warning before values become critical.
 4. **Alert**: Medium and High risk raise one alert that states exactly why.
-5. **Respond**: the alert escalates caregiver, then family, then doctor, until someone acknowledges it.
+5. **Respond**: a supervisor thread escalates the alert caregiver, then family, then doctor, logging a (simulated) push, SMS and voice call at each step, until someone acknowledges it. It runs with no browser open.
+
+If the device goes silent, that is an alert too: no readings for 45 seconds raises a **signal lost** alert, and it closes itself when data returns.
 
 ![Pipeline](docs/images/data-flow.svg)
 
@@ -36,9 +38,9 @@ Sense  ->  Understand  ->  Predict  ->  Alert  ->  Respond
 | Evaluation criterion | How it is addressed | Where to look |
 |---|---|---|
 | End-to-end integration (25%) | One live flow from simulator to acknowledgement, visible stage by stage on the dashboard | [Architecture](docs/ARCHITECTURE.md) |
-| Technical skills (20%) | Small validated REST API, refactored risk engine, 10 regression tests, CI with lint and security scan | [Assessment](docs/ASSESSMENT.md) |
-| Reliability and resilience (20%) | Disk-backed offline buffer, chunked flush, idempotent writes, input validation, WAL database | [Resilience](#reliability) |
-| Practical implementation (20%) | Caregiver check-in, escalation ladder, English and Hindi notes, one-command demo, Docker files | [Quick start](#quick-start) |
+| Technical skills (20%) | Small validated REST API, pure risk engine, 33 tests plus a 15-check end-to-end script against the real server, CI with lint and security scan, two decision records | [Assessment](docs/ASSESSMENT.md), [ADRs](docs/adr), [Code tour](docs/CODE_TOUR.md) |
+| Reliability and resilience (20%) | Disk-backed offline buffer, chunked flush, idempotent writes, input validation, WAL database, signal-loss alert, unattended escalation | [Resilience](#reliability) |
+| Practical implementation (20%) | Caregiver check-in, escalation ladder with a notification log, English and Hindi notes, one-command demo, Docker files | [Quick start](#quick-start) |
 | Explainability and clinical safety (15%) | Every score lists its reasons, early warnings say "possible", disclaimers on every screen | [Risk model](docs/RISK_MODEL.md) |
 
 ## Quick start
@@ -78,9 +80,10 @@ docker compose up --build
 | 1 | Open the dashboard, enter a name, press **Check in** | Caregiver shown as on duty |
 | 2 | Under Simulate, choose **Deteriorating** | SpO2 falls, heart rate rises, an early warning appears, risk climbs to High |
 | 3 | Add the note `saans phool rahi hai, chakkar` | Hindi symptom keywords add to the score |
-| 4 | Wait, do not acknowledge | The alert escalates to family, then the doctor |
+| 4 | Wait, do not acknowledge | The alert escalates to family, then the doctor; each step appears in the notification log under the alert |
 | 5 | Press **Acknowledge** | The alert closes and the response time is recorded |
 | 6 | Choose **Cut** under Network, wait, then **Online** | Device buffers readings, then syncs them with no loss and no duplicates |
+| 7 | Keep the network cut for longer than `SIGNAL_LOSS_SECONDS` (default 45; start with `SIGNAL_LOSS_SECONDS=10` to see it quickly) | Headline becomes "No signal from the device" and a **Signal lost** alert escalates; restoring the network closes it automatically |
 
 A timed script for the 3-minute video is in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
 
@@ -107,7 +110,8 @@ A transparent rules model was chosen over a black box so that every alert can sa
 - The device writes every reading to an atomic on-disk buffer and clears it only after the server confirms receipt.
 - The API validates each reading, rejects bad ones without failing the batch, and ignores duplicates by client id.
 - The dashboard shows device state honestly: online, no recent data, or network cut.
-- Escalation is driven by the server clock, so it continues without anyone watching the screen.
+- Escalation is driven by the server clock in a supervisor thread, so it continues without anyone watching the screen.
+- A device that goes silent raises its own alert instead of leaving the last risk on screen as if it were current.
 
 ![Escalation](docs/images/escalation.svg)
 
@@ -127,6 +131,8 @@ A transparent rules model was chosen over a black box so that every alert can sa
 | `WARDZERO_DB` | `wardzero.db` | SQLite file |
 | `ESCALATION_SECONDS` | `30` | Seconds per escalation step |
 | `NOTE_WINDOW_SECONDS` | `1800` | How long a caregiver note influences risk |
+| `SIGNAL_LOSS_SECONDS` | `45` | Silence longer than this raises a signal-lost alert |
+| `WARDZERO_WORKER` | `1` | Set to `0` to disable the supervisor thread (tests do this) |
 | `API` | `http://127.0.0.1:5000` | Simulator target |
 
 ## Project structure
@@ -138,9 +144,10 @@ simulator.py           Virtual sensors with offline buffering
 demo.py                One-command launcher
 templates/index.html   Dashboard (served as-is)
 static/fonts/          Self-hosted Instrument Sans and Serif (OFL)
-test_ward.py           Regression tests (python -m unittest)
-scripts/               Diagram generator
-docs/                  Architecture, API, risk model, assessment, roadmap
+test_ward.py           API, alert, escalation and signal-loss tests
+test_risk.py           Risk engine unit tests
+scripts/               Diagram generator, end-to-end check against the real server
+docs/                  Architecture, API, risk model, assessment, roadmap, code tour, ADRs
 assets/                Logo and its design brief
 .github/               CI workflow, issue and pull request templates
 Dockerfile, docker-compose.yml
@@ -152,7 +159,8 @@ Dockerfile, docker-compose.yml
 pip install -r requirements-dev.txt
 ruff check .
 python -m unittest -v
-bandit -q -r app.py risk.py simulator.py demo.py
+python scripts/e2e_check.py         # boots the real server, 15 checks, about 25 s
+bandit -q -r app.py risk.py simulator.py demo.py scripts/e2e_check.py
 python scripts/make_diagrams.py     # regenerate docs/images/*.svg
 ```
 
@@ -169,10 +177,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [CHANGELOG](CHANGELOG.md).
 | [Engineering assessment](docs/ASSESSMENT.md) | Inventory, complexity, debt, security findings |
 | [Roadmap](docs/ROADMAP.md) | Planned work, written as testable tickets |
 | [Demo script](docs/DEMO_SCRIPT.md) | Timed 3-minute recording plan |
+| [Code tour](docs/CODE_TOUR.md) | One reading followed through the code, plus likely questions and answers |
+| [Decision records](docs/adr) | Why a supervisor thread, why signal loss is an alert |
 
 ## Limitations
 
-Thresholds are illustrative. The trend window counts readings rather than hours, so "24 to 48 hours ahead" is demonstrated, not clinically validated. There is one patient, no login, and notifications are in-app only. See the [roadmap](docs/ROADMAP.md).
+Thresholds are illustrative. The trend window counts readings rather than hours, so "24 to 48 hours ahead" is demonstrated, not clinically validated. There is one patient and no login. Notifications are simulated: each escalation step is written to a log and shown on the dashboard, but no message leaves the machine. See the [roadmap](docs/ROADMAP.md).
+
+## Credits
+
+Flask (BSD-3-Clause), requests (Apache-2.0) and SQLite (public domain) are the only runtime dependencies. Instrument Sans and Instrument Serif are used under the SIL Open Font License. The scoring bands are inspired by the structure of the NEWS2 early-warning score published by the Royal College of Physicians; they are not NEWS2 and are not clinically validated. No pretrained models and no external APIs are used. Development tools: ruff, bandit, radon.
 
 ## License
 

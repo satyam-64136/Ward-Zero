@@ -26,6 +26,8 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Security scan
-        run: bandit -q -r app.py risk.py simulator.py demo.py
+        run: bandit -q -r app.py risk.py simulator.py demo.py scripts/e2e_check.py
       - name: Tests
         run: python -m unittest -v
+      - name: End-to-end check (real server)
+        run: python scripts/e2e_check.py

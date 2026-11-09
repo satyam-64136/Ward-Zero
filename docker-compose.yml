@@ -5,6 +5,7 @@ services:
       - "127.0.0.1:5000:5000"   # localhost only: this serves patient-style data
     environment:
       ESCALATION_SECONDS: "30"
+      SIGNAL_LOSS_SECONDS: "45"
     volumes:
       - wardzero-data:/data
     restart: unless-stopped
