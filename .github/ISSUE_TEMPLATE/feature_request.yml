@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: check
+    attributes:
+      label: How will we know it works?
+      description: Plain steps anyone could follow, and what they should see.
+    validations:
+      required: true

@@ -1,6 +1,11 @@
 """IoT simulator: sends vitals every second. Buffers to disk when the link is down
 (or when 'Cut network' is pressed on the dashboard) and flushes on reconnect."""
-import json, os, random, time, uuid
+import json
+import os
+import random
+import time
+import uuid
+
 import requests
 
 API = os.environ.get("API", "http://127.0.0.1:5000")

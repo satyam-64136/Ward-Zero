@@ -24,48 +24,63 @@ TEMP = [(0, 35, 3), (35.01, 36, 1), (36.01, 38, 0), (38.01, 39, 1), (39.01, 50, 
 def _mean(xs):
     return sum(xs) / len(xs)
 
+# name -> (bands, reading key, decimals, unit)
+VITALS = {"HR": (HR, "hr", 0, " bpm"), "SpO2": (SPO2, "spo2", 1, "%"),
+          "SBP": (SBP, "sbp", 0, " mmHg"), "Temp": (TEMP, "temp", 1, " °C")}
+
+def _vitals(r):
+    """Points per vital for the latest reading, with one readable reason per non-zero vital."""
+    pts, reasons = {}, []
+    for name, (bands, key, nd, unit) in VITALS.items():
+        pts[name] = _band(r[key], bands)
+        if pts[name]:
+            shown = round(r[key]) if nd == 0 else round(r[key], nd)
+            reasons.append(f"{name} {shown}{unit} (+{pts[name]})")
+    return pts, reasons
+
+def _trend(readings):
+    """Proxy for 24-48h deterioration: first 6 vs last 6 readings of a 24-reading window."""
+    w = readings[-24:]
+    if len(w) < 12:
+        return 0, []
+    first, last = w[:6], w[-6:]
+    avg = lambda rows, k: _mean([x[k] for x in rows])  # noqa: E731
+    d = lambda k: avg(last, k) - avg(first, k)  # noqa: E731
+    pts, why = 0, []
+    if d("spo2") <= -3:
+        pts += 2
+        why.append(f"SpO2 trending down {avg(first, 'spo2'):.0f}→{avg(last, 'spo2'):.0f}%")
+    if d("hr") >= 15:
+        pts += 1
+        why.append(f"Heart rate rising +{d('hr'):.0f} bpm")
+    if d("sbp") <= -15:
+        pts += 1
+        why.append(f"Systolic BP falling {d('sbp'):.0f} mmHg")
+    if d("temp") >= 0.8:
+        pts += 1
+        why.append(f"Temperature rising +{d('temp'):.1f} °C")
+    return pts, why
+
+def _note_hits(notes):
+    """Symptom groups mentioned in recent caregiver notes (English + Hindi), at most 3 (+1 each)."""
+    text = " ".join(notes).lower()
+    return [label for label, kws in KEYWORDS.items() if any(k in text for k in kws)][:3]
+
+def _level(score, pts, early):
+    level = "High" if score >= 6 else "Medium" if (score >= 3 or 3 in pts.values()) else "Low"
+    return "Medium" if early and level == "Low" else level
+
 def assess(readings, notes):
     """readings: list of dicts (oldest->newest) with hr, spo2, sbp, temp. notes: list of strings."""
     if not readings:
         return {"level": "Low", "score": 0, "reasons": ["Waiting for sensor data…"], "early_warning": False, "pts": {}}
-    r = readings[-1]
-    pts = {"HR": _band(r["hr"], HR), "SpO2": _band(r["spo2"], SPO2),
-           "SBP": _band(r["sbp"], SBP), "Temp": _band(r["temp"], TEMP)}
-    score = sum(pts.values())
-    reasons = [f"{k} {v}" + {"HR": " bpm", "SpO2": "%", "SBP": " mmHg", "Temp": " °C"}[k]
-               + f" (+{pts[k]})" for k, v in
-               [("HR", round(r["hr"])), ("SpO2", round(r["spo2"], 1)), ("SBP", round(r["sbp"])), ("Temp", round(r["temp"], 1))]
-               if pts[k]]
-
-    # Trend (proxy for 24-48h deterioration): first 6 vs last 6 readings of the window
-    trend = 0
-    w = readings[-24:]
-    if len(w) >= 12:
-        a, b = w[:6], w[-6:]
-        d = lambda k: _mean([x[k] for x in b]) - _mean([x[k] for x in a])
-        if d("spo2") <= -3:
-            trend += 2; reasons.append(f"SpO2 trending down {_mean([x['spo2'] for x in a]):.0f}→{_mean([x['spo2'] for x in b]):.0f}%")
-        if d("hr") >= 15:
-            trend += 1; reasons.append(f"Heart rate rising +{d('hr'):.0f} bpm")
-        if d("sbp") <= -15:
-            trend += 1; reasons.append(f"Systolic BP falling {d('sbp'):.0f} mmHg")
-        if d("temp") >= 0.8:
-            trend += 1; reasons.append(f"Temperature rising +{d('temp'):.1f} °C")
-    score += trend
-
-    # Caregiver notes (English + Hindi keywords)
-    text = " ".join(notes).lower()
-    hits = [label for label, kws in KEYWORDS.items() if any(k in text for k in kws)]
-    for h in hits:
-        reasons.append(f"Caregiver note mentions {h} (+1)")
-    score += min(len(hits), 3)
-
-    level = "High" if score >= 6 else "Medium" if (score >= 3 or 3 in pts.values()) else "Low"
+    pts, reasons = _vitals(readings[-1])
+    trend, why = _trend(readings)
+    hits = _note_hits(notes)
+    reasons += why + [f"Caregiver note mentions {h} (+1)" for h in hits]
+    score = sum(pts.values()) + trend + len(hits)
     early = trend >= 2
-    if early and level == "Low":
-        level = "Medium"
     if early:
         reasons.append("Early-warning: pattern suggests possible deterioration")
-    if not reasons:
-        reasons = ["Vitals within expected range"]
-    return {"level": level, "score": score, "reasons": reasons, "early_warning": early, "pts": pts}
+    return {"level": _level(score, pts, early), "score": score, "reasons": reasons or ["Vitals within expected range"],
+            "early_warning": early, "pts": pts}

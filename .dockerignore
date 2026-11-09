@@ -1,0 +1,11 @@
+.git
+.github
+docs
+scripts
+assets
+__pycache__
+*.db*
+queue.json*
+.env
+.venv
+test_ward.py

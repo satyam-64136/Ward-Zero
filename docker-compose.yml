@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:5000:5000"   # localhost only: this serves patient-style data
+    environment:
+      ESCALATION_SECONDS: "30"
+    volumes:
+      - wardzero-data:/data
+    restart: unless-stopped
+
+  simulator:
+    build: .
+    command: ["python", "/app/simulator.py"]
+    working_dir: /sim
+    environment:
+      API: http://app:5000
+    volumes:
+      - simulator-buffer:/sim
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  wardzero-data:
+  simulator-buffer:

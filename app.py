@@ -1,5 +1,10 @@
-import math, os, sqlite3, time
-from flask import Flask, request, jsonify, send_from_directory
+import math
+import os
+import sqlite3
+import time
+
+from flask import Flask, jsonify, request, send_from_directory
+
 from risk import assess
 
 DB = os.environ.get("WARDZERO_DB", "wardzero.db")
@@ -21,7 +26,9 @@ def clean(x):
         ts, cid = float(x["ts"]), str(x["cid"])[:64]
     except (KeyError, TypeError, ValueError):
         return None
-    if not all(math.isfinite(v[k]) and lo <= v[k] <= hi for k, (lo, hi) in LIMITS.items()) or not math.isfinite(ts):
+    if not all(math.isfinite(v[k]) and lo <= v[k] <= hi for k, (lo, hi) in LIMITS.items()):
+        return None
+    if not math.isfinite(ts) or ts > time.time() + 300:  # a far-future clock would pin "latest reading" forever
         return None
     return (cid, ts, v["hr"], v["spo2"], v["sbp"], v["dbp"], v["temp"])
 
@@ -57,8 +64,21 @@ def maybe_alert(c, risk):
     now = time.time()
     if last and now - last["ts"] < 300 and ORDER[last["level"]] >= ORDER[risk["level"]]:
         return
-    c.execute("INSERT INTO alerts(ts,level,reason,status) VALUES(?,?,?,'open')",
-              (now, risk["level"], "; ".join(risk["reasons"][:4])))
+    # A new alert supersedes still-open older ones and keeps the ORIGINAL alarm time,
+    # so escalation timing and "time to acknowledge" are measured from the first alarm.
+    first = c.execute("SELECT MIN(ts), MAX(esc) FROM alerts WHERE status='open'").fetchone()
+    c.execute("UPDATE alerts SET status='superseded' WHERE status='open'")
+    c.execute("INSERT INTO alerts(ts,level,reason,status,esc) VALUES(?,?,?,'open',?)",
+              (first[0] or now, risk["level"], "; ".join(risk["reasons"][:4]), first[1] or 0))
+
+@app.after_request
+def headers(resp):
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    if request.path.startswith("/api/"):
+        resp.headers["Cache-Control"] = "no-store"  # patient data must not be cached
+    return resp
 
 @app.get("/")
 def index():
@@ -129,6 +149,7 @@ def state():
     with db() as c:
         for a in c.execute("SELECT * FROM alerts WHERE status='open'").fetchall():
             step = min(int((now - a["ts"]) // ESC), len(LADDER) - 1)
+            step = max(step, a["esc"])  # never step back down
             if step != a["esc"]:
                 c.execute("UPDATE alerts SET esc=? WHERE id=?", (step, a["id"]))
         rs = [dict(r) for r in c.execute("SELECT * FROM readings ORDER BY ts DESC LIMIT 40")][::-1]

@@ -1,3 +1,12 @@
 __pycache__/
+*.pyc
 *.db
+*.db-wal
+*.db-shm
 queue.json
+queue.json.tmp
+.env
+.venv/
+venv/
+.ruff_cache/
+node_modules/
