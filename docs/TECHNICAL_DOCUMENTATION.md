@@ -26,6 +26,7 @@ Submission document for **Operation Ward Zero**. It follows the structure the or
 | Capability | Behaviour |
 |---|---|
 | Patient monitoring | Heart rate, SpO2, blood pressure, temperature; live values, sparklines and a simulated ECG |
+| Guided demo | A five-step panel on the dashboard highlights the next action; one button resets the demo |
 | Caregiver monitoring | Check-in with "on duty" status; acknowledgement records who responded and how fast |
 | System reliability | Atomic offline buffer, chunked flush, idempotent writes, input validation, device-state indicator, signal-lost alert when a device goes silent |
 | Contextual intelligence | Vitals, short-term history (trend) and English or Hindi caregiver notes combined in one score |
@@ -65,7 +66,7 @@ Verified by tests and live runs: cutting the network buffers readings, restoring
 | Criterion | Evidence |
 |---|---|
 | End-to-end integration (25%) | Live pipeline strip: Sense, Understand, Predict, Alert, Respond update from real state |
-| Technical skills (20%) | Layered code, pure risk functions (max complexity 7), 33 tests plus a real-server end-to-end script, CI, [assessment](ASSESSMENT.md), [decision records](adr), [code tour](CODE_TOUR.md) |
+| Technical skills (20%) | Layered code, pure risk functions (max complexity 7), 35 tests plus a real-server end-to-end script, CI, [assessment](ASSESSMENT.md), [decision records](adr), [code tour](CODE_TOUR.md) |
 | Reliability and resilience (20%) | Offline buffer, idempotency, validation, WAL, signal-loss alert, unattended escalation, differential and regression tests |
 | Practical implementation (20%) | One-command demo, caregiver workflow, Hindi and English notes, light and dark UI, Docker |
 | Explainability and clinical safety (15%) | Reasons on every alert, hedged wording, disclaimers, no real data |
@@ -76,7 +77,7 @@ Verified by tests and live runs: cutting the network buffers readings, restoring
 
 **Limitations.** Illustrative thresholds, not clinically validated. The trend window counts readings, not hours. No login. Notifications are simulated: they are logged and shown on the dashboard, and nothing is sent. Signal loss is measured against device timestamps. The Docker image has not been built by the author's tooling (the gunicorn command it uses was run and verified).
 
-**Future work.** Authentication and roles, real SMS or WhatsApp delivery with receipts, multiple patients, time-based history, validated models with clinical partners, push updates instead of polling. See [ROADMAP.md](ROADMAP.md).
+**Future work.** Authentication and roles, real SMS or WhatsApp delivery with receipts, multiple patients, time-based history, validated models with clinical partners, push updates instead of polling.
 
 ## 9. Credits
 

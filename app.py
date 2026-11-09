@@ -18,7 +18,7 @@ MAX_BATCH = 1000
 LADDER = ["Caregiver (Priya)", "Family (Rahul)", "Doctor (Dr. Mehta)"]
 CHANNELS = ["Push notification", "SMS", "Voice call"]  # one per rung; delivery is SIMULATED (logged, nothing is sent)
 ORDER = {"Low": 0, "Medium": 1, "High": 2}
-SIM = {"scenario": "stable", "offline": False}
+SIM = {"scenario": "stable", "offline": False, "epoch": 0}  # epoch counts demo resets so the simulator can start fresh
 app = Flask(__name__)
 
 LIMITS = dict(hr=(20, 250), spo2=(50, 100), sbp=(40, 300), dbp=(20, 200), temp=(30, 45))
@@ -193,7 +193,17 @@ def sim():
         d = body()
         if d.get("scenario", "stable") not in SCENARIOS or not isinstance(d.get("offline", False), bool):
             return jsonify(error="invalid scenario/offline value"), 400
-        SIM.update({k: d[k] for k in SIM if k in d})
+        SIM.update({k: d[k] for k in ("scenario", "offline") if k in d})
+    return jsonify(SIM)
+
+@app.post("/api/reset")
+def reset():
+    """Demo only: wipe all synthetic data and return to a calm, online patient."""
+    with db() as c:
+        c.execute("BEGIN IMMEDIATE")
+        for t in ("readings", "notes", "alerts", "checkins", "notifications"):  # fixed names, no user input
+            c.execute(f"DELETE FROM {t}")  # nosec B608
+    SIM.update(scenario="stable", offline=False, epoch=SIM["epoch"] + 1)
     return jsonify(SIM)
 
 @app.get("/api/health")
@@ -225,5 +235,6 @@ init()
 if os.environ.get("WARDZERO_WORKER", "1") != "0":  # tests switch it off and call cycle() directly
     start_supervisor()
 if __name__ == "__main__":
+    logging.getLogger("werkzeug").setLevel(logging.WARNING)  # no log line for every dashboard refresh
     # localhost-only by default (patient data!). Set HOST=0.0.0.0 deliberately to expose on a LAN.
     app.run(host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", 5000)))

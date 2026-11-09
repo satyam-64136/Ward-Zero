@@ -4,11 +4,15 @@ All notable changes to this project are recorded here. Format follows [Keep a Ch
 
 ## [0.4.0] - 2026-11-09
 ### Added
+- Guided dashboard: a five-step panel whose highlighted button shows the next action, replacing the Simulate panel; `Reset demo` button and `POST /api/reset`.
+- `demo.py` runs from any folder and explains port conflicts.
 - Supervisor thread: escalation and notifications advance every second with no browser open.
 - Simulated notification log (`notifications` table, `GET /api/notifications`), shown under each alert on the dashboard.
 - Signal-lost alert when no readings arrive for `SIGNAL_LOSS_SECONDS` (default 45); it closes itself when data returns.
-- `test_risk.py` (12 risk engine tests), 11 new API and supervisor tests, `scripts/e2e_check.py` (15 checks against the real server) and a CI step for it.
+- `test_risk.py` (12 risk engine tests), 13 new API and supervisor tests, `scripts/e2e_check.py` (15 checks against the real server) and a CI step for it.
 - `docs/CODE_TOUR.md`, `docs/adr/` decision records, a debug report in `docs/ASSESSMENT.md`.
+### Removed
+- Unused project files: issue and pull request templates, contributing guide, logo design brief, roadmap draft, stale screenshots and duplicate PNG diagrams.
 ### Changed
 - Alerts have a `kind` (`risk` or `signal`) and a new `resolved` status; existing databases are migrated on start.
 - Alert-writing paths take the SQLite write lock up front.

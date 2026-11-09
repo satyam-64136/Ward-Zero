@@ -48,7 +48,7 @@ h1{font:400 clamp(44px,5.6vw,84px)/1 var(--serif);letter-spacing:-.015em;margin:
 .vn{display:flex;align-items:baseline;gap:8px;margin:14px 0 6px}.vn .n{font:400 clamp(56px,5.6vw,84px)/1 var(--sans);letter-spacing:-.045em;font-variant-numeric:tabular-nums;transition:color .5s}
 .vn .u{color:var(--mu);font-size:16px}.vn .d{font:400 28px/1 var(--sans);color:var(--mu);letter-spacing:-.02em}
 .vc.p1 .n,.vc.p2 .n{color:var(--warn)}.vc.p3 .n{color:var(--bad)}.vc canvas{width:100%;height:60px;display:block}
-.trio{display:grid;grid-template-columns:1.15fr 1.1fr .85fr;gap:18px;margin-top:18px;align-items:stretch}.panel{padding:28px 28px 26px}
+.trio{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;margin-top:18px;align-items:stretch}.panel{padding:28px 28px 26px}
 h2{font:400 28px/1.1 var(--serif);margin:0 0 18px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}h2 small{font:500 14px var(--sans);color:var(--mu)}
 .lvl{font:400 76px/.95 var(--serif);letter-spacing:-.01em;transition:color .5s}.Low .lvl{color:var(--ok)}.Medium .lvl{color:var(--warn)}.High .lvl{color:var(--bad)}
 .lvlrow{display:flex;align-items:flex-end;gap:18px}.lvlrow small{color:var(--mu);font-size:15px;padding-bottom:8px}.meter{display:flex;gap:5px;margin-left:auto;padding-bottom:12px}.meter i{width:30px;height:5px;border-radius:3px;background:var(--line2);transition:background .5s}
@@ -72,6 +72,14 @@ input{font:inherit;background:var(--glass);color:var(--tx);border:1px solid var(
 .toast{background:var(--bg);color:var(--tx);border:1px solid var(--line2);border-radius:14px;padding:12px 16px;box-shadow:0 20px 40px -10px #000a;animation:rv .3s both}.toast.err{border-color:var(--bad)}.toast.warn{border-color:var(--warn)}
 footer{padding:44px 0 40px;color:var(--dim);font-size:13.5px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .nl{list-style:none;margin:12px 0 0;padding:0}.nl li{display:flex;gap:10px;font-size:13.5px;color:var(--mu);padding:3px 0}.nl time{color:var(--dim);font-variant-numeric:tabular-nums;flex:none}.nl b{font-weight:500;color:var(--tx)}.al.signal .lv{color:var(--warn)}.al.signal.done .lv{color:var(--mu)}
+.guide{padding:22px 26px 24px;margin-top:14px}.gh{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}.gh h2{margin:0 0 4px}.gs{margin:0;color:var(--mu);font-size:15px}
+.nm{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:14px}.nm input{width:130px;padding:8px 12px}
+.steps{list-style:none;margin:18px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.steps li{display:flex;flex-direction:column;gap:7px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--glass);transition:border-color .3s,box-shadow .3s,opacity .3s}
+.steps li.next{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 20%,transparent)}.steps li.done{opacity:.72}
+.steps .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:600 13px var(--sans);background:var(--line2);color:var(--tx)}.steps li.next .n{background:var(--acc);color:var(--btnx)}.steps li.done .n::after{content:"\2713"}.steps li.done .n{font-size:0}.steps li.done .n::after{font-size:13px}
+.steps b{font-weight:600;font-size:15px}.steps small{color:var(--mu);font-size:13.5px;line-height:1.4;flex:1}.steps .btn{width:100%}.steps li.next .btn{background:var(--btn);color:var(--btnx);border-color:var(--btn)}
+@media(max-width:1100px){.steps{grid-template-columns:1fr 1fr}}@media(max-width:720px){.steps{grid-template-columns:1fr}}
 @media(max-width:1100px){.hero{grid-template-columns:1fr;gap:40px;padding-top:44px}.trio{grid-template-columns:1fr}}
 @media(max-width:720px){.wrap{padding:0 20px}.rail{grid-template-columns:1fr;gap:18px}.rail li::before{display:none}.pt{display:none}.sub{font-size:17px}.panel{padding:22px}.lvl{font-size:60px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
@@ -85,6 +93,15 @@ footer{padding:44px 0 40px;color:var(--dim);font-size:13.5px;display:flex;justif
 <nav class="nav rv" style="--i:0"><div class="brand"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.5 16 4l12 10.5V27a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M8 19.5h4l2-5 3 9 2-4h5"/></svg>Ward Zero</div><span class="pt">Bed 1, demo patient</span><div class="sp"></div>
 <span class="st" id="dev"><i class="dot"></i><span>Connecting</span></span><span class="st" id="duty"><i class="dot"></i><span>No caregiver on duty</span></span><button class="ib" id="th" aria-label="Switch light or dark theme"></button></nav>
 <div class="disc rv" style="--i:1"><svg class="i"><use href="#i-info"/></svg>Experimental prototype on synthetic data. Not a medical device. No diagnosis or treatment claims.</div>
+<section class="glass guide rv" style="--i:2" aria-label="Demo guide"><div class="gh"><div><h2>Try it in 5 steps</h2><p class="gs">Everything here is simulated. Press the highlighted button and watch the page react.</p></div>
+<div class="row"><label class="nm">Caregiver name <input id="who" value="Priya" maxlength="40" aria-label="Caregiver name"></label><button class="btn" id="rs" title="Clear all demo data and start again">Reset demo</button></div></div>
+<ol class="steps">
+<li id="g1"><span class="n">1</span><b>Check in</b><small>Tell the system a caregiver is on duty.</small><button class="btn" data-g="checkin">Check in</button></li>
+<li id="g2"><span class="n">2</span><b>Make the patient worse</b><small>Oxygen falls and heart rate rises. Watch the risk climb and an alert appear.</small><button class="btn" data-g="worse">Make patient worse</button></li>
+<li id="g3"><span class="n">3</span><b>Add a symptom note</b><small>English or Hindi notes add to the risk score and show up in the reasons.</small><button class="btn" data-g="note">Add sample note</button></li>
+<li id="g4"><span class="n">4</span><b>Respond to the alert</b><small>Wait to see it escalate to family, then the doctor. Or acknowledge it.</small><button class="btn" data-g="ack">Acknowledge alert</button></li>
+<li id="g5"><span class="n">5</span><b>Cut the network</b><small>The device keeps its readings and sends them when it returns. A long silence raises an alert.</small><button class="btn" data-g="net">Cut network</button></li>
+</ol></section>
 <section class="hero"><div class="rv" style="--i:2"><h1 id="hd">Waiting for the first reading.</h1><p class="sub" id="hs">Start the simulator to stream a patient’s vitals here.</p>
 <ol class="rail" aria-label="System pipeline">
 <li id="s_sense"><i class="node"></i><b>Sense</b><small>Waiting for data</small></li><li id="s_understand"><i class="node"></i><b>Understand</b><small>No data yet</small></li>
@@ -99,10 +116,7 @@ footer{padding:44px 0 40px;color:var(--dim);font-size:13.5px;display:flex;justif
 <div class="sec">Caregiver notes</div><div class="row"><input id="note" maxlength="500" placeholder="English or Hindi, e.g. saans phool rahi hai" aria-label="Caregiver note"><button class="btn pri" id="nb">Add</button></div>
 <div class="chips"><button>saans phool rahi hai</button><button>chakkar aa rahe hain</button><button>patient feels breathless</button></div><ul class="notes" id="notes"></ul></div>
 <div class="glass panel rv" style="--i:5"><h2>Response <small id="ac">No open alerts</small></h2><div id="alerts"><p class="empty">Loading…</p></div></div>
-<div class="glass panel rv" style="--i:6"><h2>Simulate</h2><div class="lab">Patient condition</div><div class="seg" data-g="scenario"><button data-v="stable" aria-pressed="true">Stable</button><button data-v="deteriorating" aria-pressed="false">Deteriorating</button></div>
-<div class="lab">Network between device and server</div><div class="seg" data-g="offline"><button data-v="false" aria-pressed="true">Online</button><button data-v="true" aria-pressed="false">Cut</button></div>
-<div class="lab">Caregiver</div><div class="row"><input id="who" value="Priya" maxlength="40" aria-label="Caregiver name"><button class="btn" id="ci">Check in</button></div>
-<p class="hint">While the network is cut, the device keeps every reading and sends them when it returns.</p></div></section>
+</section>
 <footer><span>Ward Zero, built for Operation Ward Zero.</span><span>Rule-based, explainable risk scoring. Thresholds are illustrative, not clinically validated.</span></footer></div>
 <div id="toasts" aria-live="polite"></div>
 <script>
@@ -170,16 +184,27 @@ function render(){const R=S.risk,L=R.level,open=S.alerts.filter(a=>a.status=="op
     return`<article class="al ${x.level} ${x.kind} ${o?"":"done"}"><header><span class="lv">${lab(x)}</span><time>${new Date(x.ts*1000).toLocaleTimeString()}</time></header><p>${esc(x.reason)}</p>${nl(x.id)}`+
     (o?`<ol class="lad">${S.ladder.map((l,i)=>`<li class="${i<x.esc?"passed":i==x.esc?"cur":""}">${esc(l)}</li>`).join("")}</ol><div class="row"><button class="btn pri" data-ack="${x.id}">Acknowledge</button><small id="cd_${x.id}"></small></div>`
     :x.status=="resolved"?`<p class="ok-t">Signal restored after ${Math.round(x.ack_ts-x.ts)}s, closed automatically</p>`:`<p class="ok-t">Acknowledged by ${esc(x.ack_by)} after ${Math.round(x.ack_ts-x.ts)}s</p>`)+`</article>`}).join(""):'<p class="empty">No alerts right now.</p><p class="hint">When risk reaches Medium or High, the caregiver is alerted first. An alert nobody acknowledges moves to the family, then to the doctor. Set the patient to Deteriorating to watch it happen.</p>');
-  setH($("notes"),S.notes.map(n=>`<li>${esc(n.text)}</li>`).join(""));tick()}
+  setH($("notes"),S.notes.map(n=>`<li>${esc(n.text)}</li>`).join(""));
+  const sc=S.sim.scenario=="deteriorating",dn=[!!S.checkin,sc||S.alerts.length>0,S.notes.length>0,S.alerts.some(x=>x.status=="acknowledged"),off||S.alerts.some(x=>x.kind=="signal")],nx=dn.indexOf(false);
+  dn.forEach((d,i)=>{$("g"+(i+1)).className=d?"done":i==nx?"next":""});
+  setT($("g2").querySelector("button"),sc?"Make patient stable":"Make patient worse");setT($("g5").querySelector("button"),off?"Restore network":"Cut network");$("g4").querySelector("button").disabled=!open.length;
+  tick()}
 function tick(){if(!S)return;const now=Date.now()/1000+skew,age=S.age==null?null:S.age+(now-S.now);
   if(S.sim.offline)chip("dev","bad","Network cut, buffering");else if(age==null||age>6)chip("dev","warn","No recent data");else chip("dev","ok","Device online");
   if(S.checkin){const m=Math.floor((now-S.checkin.ts)/60);chip("duty","ok",`${S.checkin.name} checked in ${m<1?"just now":m+" min ago"}`)}
   S.alerts.filter(a=>a.status=="open").forEach(a=>{const el=$("cd_"+a.id);if(el)el.textContent=a.esc>=S.ladder.length-1?"Doctor notified, awaiting acknowledgement":`Escalates in ${Math.max(0,Math.ceil(a.ts+(a.esc+1)*S.esc_seconds-now))}s`})}
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.ack)post(`/api/alerts/${b.dataset.ack}/ack`,{by:$("who").value.trim()||"Caregiver"},b);
+  else if(b.dataset.g)guide(b.dataset.g,b);
   else if(b.closest(".seg")){const g=b.closest(".seg").dataset.g,v=b.dataset.v;post("/api/sim",{[g]:v=="true"?true:v=="false"?false:v})}
   else if(b.closest(".chips")){$("note").value=b.textContent;$("note").focus()}});
-$("ci").onclick=async e=>{if(await post("/api/checkin",{name:$("who").value.trim()||"Caregiver"},e.currentTarget))toast("Checked in")};
+async function guide(a,b){const who=$("who").value.trim()||"Caregiver",sim=S?S.sim:{};
+  if(a=="checkin"){if(await post("/api/checkin",{name:who},b))toast("Checked in as "+who)}
+  else if(a=="worse")await post("/api/sim",{scenario:sim.scenario=="deteriorating"?"stable":"deteriorating"});
+  else if(a=="note"){if(await post("/api/notes",{text:"saans phool rahi hai, chakkar"},b))toast("Note added")}
+  else if(a=="ack"){for(const x of (S?S.alerts:[]).filter(x=>x.status=="open"))await post(`/api/alerts/${x.id}/ack`,{by:who},b)}
+  else if(a=="net")await post("/api/sim",{offline:!sim.offline})}
+$("rs").onclick=async e=>{if(await post("/api/reset",{},e.currentTarget)){prev=null;toast("Demo reset. Starting from a calm patient.")}};
 const addNote=async()=>{const t=$("note").value.trim();if(t&&await post("/api/notes",{text:t},$("nb"))){$("note").value="";toast("Note added")}};
 $("nb").onclick=addNote;$("note").onkeydown=e=>{if(e.key=="Enter")addNote()};
 new ResizeObserver(draw).observe($("vit"));

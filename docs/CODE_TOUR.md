@@ -55,8 +55,8 @@ caregiver --> POST /api/alerts/{id}/ack --> closes the alert, stores who and whe
 
 | Symptom | Look at |
 |---|---|
-| Dashboard says "Server unreachable" | Is `python app.py` running? `GET /api/health` |
-| No data on the dashboard | Is `python simulator.py` running? Its log says `network cut` or `server unreachable` |
+| Dashboard says "Server unreachable" | Is `python demo.py` still running? Try `GET /api/health` |
+| No data on the dashboard | The simulator runs inside `demo.py`; its terminal output says `sent`, `network cut` or `server unreachable` |
 | Alert never escalates | Is the supervisor running? It is off when `WARDZERO_WORKER=0` |
 | Signal-lost alert appears during a demo | `SIGNAL_LOSS_SECONDS` is shorter than your pause |
 | Old database errors after an upgrade | `init()` migrates automatically; delete `wardzero.db` to start clean |
@@ -64,7 +64,7 @@ caregiver --> POST /api/alerts/{id}/ack --> closes the alert, stores who and whe
 ## Checks you can run yourself
 
 ```bash
-python -m unittest -v                 # 33 tests
+python -m unittest -v                 # 35 tests
 python scripts/e2e_check.py           # boots the real server, 15 end-to-end checks, about 25 s
 ruff check . && bandit -q -r app.py risk.py simulator.py demo.py
 ```

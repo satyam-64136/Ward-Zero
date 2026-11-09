@@ -53,6 +53,9 @@ Delivery is **simulated**: the row is the notification and nothing is sent.
 ## GET, POST /api/sim
 Demo controls. `{ "scenario": "stable" | "deteriorating", "offline": true | false }`. Any other value returns `400`. The simulator polls this endpoint; `offline` makes it buffer instead of send.
 
+## POST /api/reset
+Demo only. Deletes all readings, notes, alerts, check-ins and notifications, sets the scenario to `stable` and the network to online, and increments `epoch` in the `/api/sim` response so the simulator starts again from a calm patient. Returns the new `/api/sim` state.
+
 ## GET /api/health
 `{ "status": "ok", "readings": 123 }`. Used by Docker health checks.
 

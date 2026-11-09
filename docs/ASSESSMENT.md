@@ -27,7 +27,7 @@ Tooling: non-blank line count per file (`scc` and `cloc` were not available), `r
 | Average cyclomatic complexity | A (3.7) |
 | Highest complexity | `demo.main` 9, `app.clean` 8 (both grade B) |
 | Maintainability index | A for every Python file (lowest: `app.py` 41.9) |
-| Tests | 33 unit and integration tests plus a 15-check end-to-end script, all passing |
+| Tests | 35 unit and integration tests plus a 15-check end-to-end script, all passing |
 | Lint (`ruff`), security (`bandit`) | clean |
 
 ## 2. Technology fingerprint
@@ -84,7 +84,7 @@ No credentials were found in the repository. `bandit` reports no issues.
 
 | Severity | CWE | Finding | Mitigation |
 |---|---|---|---|
-| High if exposed | CWE-306 Missing authentication | All endpoints, including `/api/sim`, are open | Binds to localhost; documented in `SECURITY.md`; roadmap item |
+| High if exposed | CWE-306 Missing authentication | All endpoints, including `/api/sim`, are open | Binds to localhost; documented in `SECURITY.md`; listed as future work |
 | Medium | CWE-319 Cleartext transmission | HTTP only | Use a TLS reverse proxy beyond localhost |
 | Medium | CWE-770 Resource limits | No rate limiting | Batch cap 1,000, note 500, name 40 characters |
 | Low | CWE-79 Cross-site scripting | All dynamic text is escaped; no Content-Security-Policy because the page uses inline script | Add a CSP when assets are split |
@@ -92,7 +92,7 @@ No credentials were found in the repository. `bandit` reports no issues.
 
 ## 6. Documentation coverage
 
-Present: README, technical documentation, architecture, API reference, risk model, roadmap, demo script, contributing, security, changelog. Remaining gaps a new engineer would hit:
+Present: README, technical documentation, architecture, API reference, risk model, code tour, decision records, demo script, security, changelog. Remaining gaps a new engineer would hit:
 
 1. Backup and restore of `wardzero.db`.
 2. A clinical validation protocol for the risk model.

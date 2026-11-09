@@ -47,11 +47,17 @@ def flush(q):
 
 def main():
     print(f"Simulator -> {API}  (Ctrl+C to stop)")
+    epoch = None
     while True:
         offline, scenario, why = False, "stable", "network cut"
         try:  # control channel (separate from data channel)
             s = requests.get(f"{API}/api/sim", timeout=2).json()
             offline, scenario = bool(s["offline"]), s["scenario"]
+            if epoch is not None and s.get("epoch", 0) != epoch:  # the dashboard pressed "Reset demo"
+                v.update(TARGET["stable"])
+                save([])
+                print("demo reset: starting from a calm patient")
+            epoch = s.get("epoch", 0)
         except Exception:
             offline, why = True, "server unreachable"
         q = load()

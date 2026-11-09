@@ -56,4 +56,4 @@ Option B buys correctness without infrastructure. Its weakness is that the threa
 
 1. [x] Add `notifications` table and migration for older databases.
 2. [x] Tests: unattended escalation, idempotency, stop after acknowledgement.
-3. [ ] Real delivery channel and delivery receipts (see roadmap).
+3. [ ] Real delivery channel and delivery receipts (future work).

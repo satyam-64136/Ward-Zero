@@ -175,4 +175,19 @@ class Ward(unittest.TestCase):
         [t.start() for t in ths]; [t.join() for t in ths]
         self.assertEqual([a["status"] for a in self._alerts("risk")], ["open"])
 
+    def test_reset_clears_everything_and_signals_the_simulator(self):
+        self.c.post("/api/readings", json=reading("r1", hr=135, spo2=88, sbp=85, temp=39.5))
+        self.c.post("/api/notes", json={"text": "saans"}); self.c.post("/api/checkin", json={"name": "Priya"})
+        W.SIM.update(scenario="deteriorating", offline=True)
+        before = W.SIM["epoch"]
+        j = self.c.post("/api/reset").get_json()
+        self.assertEqual((j["scenario"], j["offline"], j["epoch"]), ("stable", False, before + 1))
+        s = self.c.get("/api/state").get_json()
+        self.assertEqual((s["readings"], s["alerts"], s["notes"], s["checkin"]), ([], [], [], None))
+
+    def test_sim_endpoint_cannot_set_epoch(self):
+        before = W.SIM["epoch"]
+        self.c.post("/api/sim", json={"scenario": "stable", "epoch": 999})
+        self.assertEqual(W.SIM["epoch"], before)
+
 if __name__ == "__main__": unittest.main()
