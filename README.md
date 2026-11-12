@@ -183,4 +183,4 @@ Thresholds are illustrative. The trend window counts readings rather than hours,
 
 MIT, see [LICENSE](LICENSE). Fonts are licensed under the SIL Open Font License (see `static/fonts`).
 
-Author: [Satyam Kumar](https://github.com/satyam-64136), B.Tech Computer Science, DIT University.
+Author: [Satyam Kumar](https://github.com/satyam-64136)
